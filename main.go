@@ -25,6 +25,11 @@ type _user struct {
 	username string
 	password string
 }
+type _comment struct {
+	id      int64
+	comment string
+	uid     int64
+}
 
 var postNumbers int64 //post数量
 var userNumbers int64 //用户数量
@@ -33,6 +38,7 @@ func main() {
 	InitOpen() //初始化数据库
 	http.HandleFunc("/save", dataHandler)
 	http.HandleFunc("/show", showHandler)
+	http.HandleFunc("/comment", commentHandler)
 	http.HandleFunc("/change", changeHandler)
 	http.HandleFunc("/delete", deleteHandler)
 	http.HandleFunc("/register", regHandler)
@@ -102,6 +108,28 @@ func showHandler(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 	checkErr(err)
+}
+func commentHandler(writer http.ResponseWriter, request *http.Request) {
+	method := request.Method
+	if method == "POST" {
+		var comments []_comment
+		var comment _comment
+		request.ParseForm()
+		id := request.Form.Get("id") //所查看评论的推文id
+		_id, _ := strconv.Atoi(id)
+		db, err := sql.Open("sqlite3", "wall.db")
+		checkErr(err)
+		res, err := db.Query("SELECT * FROM comments")
+		for res.Next() {
+			res.Scan(&comment)
+			if int(comment.id) == _id {
+				comments = append(comments, comment)
+			}
+		}
+		writer.Header().Set("Content-Type", "application/json")
+		data, err := json.Marshal(comments)
+		writer.Write(data)
+	}
 }
 func changeHandler(writer http.ResponseWriter, request *http.Request) {
 	method := request.Method
@@ -270,7 +298,13 @@ func InitOpen() {
 	    "password" VARCHAR(100) NULL
 	)`
 	db.Exec(sqlTableUser)
-
+	sqlTableComment := `
+	CREATE TABLE IF NOT EXISTS "comments"(
+	    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+	    "comment" VARCHAR(100) NULL,
+	    "uid" INTEGER NULL
+	)`
+	db.Exec(sqlTableComment)
 	db.Close()
 }
 func checkErr(err error) {
