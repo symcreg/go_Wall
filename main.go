@@ -7,12 +7,14 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
+	"strconv"
 	"time"
 )
 
 type _unit struct {
-	uid     int64
+	id      int64
 	content string
 	name    string
 	time    string
@@ -26,9 +28,11 @@ type _user struct {
 
 var postNumbers int64 //post数量
 var userNumbers int64 //用户数量
+var del []int         //记录删除post的id
 func main() {
 	InitOpen() //初始化数据库
 	http.HandleFunc("/save", dataHandler)
+	http.HandleFunc("/show", showHandler)
 	http.HandleFunc("/change", changeHandler)
 	http.HandleFunc("/delete", deleteHandler)
 	http.HandleFunc("/register", regHandler)
@@ -42,10 +46,16 @@ func dataHandler(writer http.ResponseWriter, request *http.Request) {
 	request.ParseForm() //解析表单
 	method := request.Method
 	if method == "POST" {
-		unit.content = request.Form.Get("content")
-		unit.name = request.Form.Get("name")
-		unit.time = time.Now().Format("2006/1/02/ 15:04")
-		unit.user = request.Form.Get("user")
+		//{此处方法为读取表单数据
+		//	unit.content = request.Form.Get("content")
+		//	unit.name = request.Form.Get("name")
+		//	unit.time = time.Now().Format("2006/1/02/ 15:04")
+		//	unit.user = request.Form.Get("user")
+		//}
+		data, err := ioutil.ReadAll(request.Body)
+		checkErr(err)
+		json.Unmarshal(data, &unit) //解码json
+
 		//存入数据库
 		db, err := sql.Open("sqlite3", "wall.db")
 		checkErr(err)
@@ -69,6 +79,37 @@ func dataHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 
 }
+func showHandler(writer http.ResponseWriter, request *http.Request) {
+	var id int
+	var re bool
+	rand.Seed(time.Now().UnixNano())
+	id = rand.Intn(int(postNumbers))
+	//避免随机到删除post的id
+	for i := 0; i < len(del); i++ {
+		if id == del[i] {
+			re = true
+			break
+		}
+		if re == true {
+			rand.Seed(time.Now().UnixNano())
+			id = rand.Intn(int(postNumbers))
+		}
+	}
+	var unit _unit
+	db, err := sql.Open("sqlite3", "wall.db")
+	checkErr(err)
+	res, err := db.Query("SELECT * FROM users")
+	for res.Next() {
+		res.Scan(&unit)
+		if unit.id == int64(id) {
+			data, err := json.Marshal(unit)
+			checkErr(err)
+			writer.Write(data)
+			break
+		}
+	}
+	checkErr(err)
+}
 func changeHandler(writer http.ResponseWriter, request *http.Request) {
 	method := request.Method
 	if method == "POST" {
@@ -91,6 +132,8 @@ func changeHandler(writer http.ResponseWriter, request *http.Request) {
 func deleteHandler(writer http.ResponseWriter, request *http.Request) {
 	request.ParseForm()
 	id := request.Form.Get("id")
+	_id, _ := strconv.Atoi(id)
+	del = append(del, _id)
 	db, err := sql.Open("sqlite3", "wall.db")
 	checkErr(err)
 	delete, err := db.Prepare("delete from content where id=?")
