@@ -77,7 +77,7 @@ func changeHandler(writer http.ResponseWriter, request *http.Request) {
 		uid := request.Form.Get("uid")
 		db, err := sql.Open("sqlite3", "wall.db")
 		checkErr(err)
-		change, err := db.Prepare("update content set content=? where uid=?")
+		change, err := db.Prepare("update content set content=? where id=?")
 		checkErr(err)
 		res, err := change.Exec(newContent, uid)
 		checkErr(err)
@@ -93,7 +93,7 @@ func deleteHandler(writer http.ResponseWriter, request *http.Request) {
 	uid := request.Form.Get("uid")
 	db, err := sql.Open("sqlite3", "wall.db")
 	checkErr(err)
-	delete, err := db.Prepare("delete from content where uid=?")
+	delete, err := db.Prepare("delete from content where id=?")
 	checkErr(err)
 	res, err := delete.Exec(uid)
 	checkErr(err)
@@ -157,7 +157,7 @@ func loginHandler(writer http.ResponseWriter, request *http.Request) {
 			}
 		}
 		if success == 0 {
-			writer.WriteHeader()
+			//writer.WriteHeader()
 		}
 	}
 	if user.username == "admin" && user.password == "admin" {
@@ -173,19 +173,18 @@ func InitOpen() {
 	if err != nil {
 		panic(err)
 	}
-	sqlTableContent := `
-	CREATE TABLE IF NOT EXISTS "content"(
-	    "uid" INTEGER PRIMARY KEY AUTOINCREMENT
-	    "content" VARCHAR(1024) NULL
-	    "name" VARCHAR(20) NULL
-	    "time" VARCHAR(50) NULL
+	sqlTableContent := `CREATE TABLE IF NOT EXISTS "content"(
+	    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
+	    "content" VARCHAR(1024) NULL,
+	    "name" VARCHAR(20) NULL,
+	    "time" VARCHAR(50) NULL,
 	    "user" VARCHAR(100) NULL
 	)`
 	db.Exec(sqlTableContent)
 	sqlTableUser := `
 	CREATE TABLE IF NOT EXISTS "users"(
-	    "uid" INTEGER PRIMARY KEY AUTOINCREMENT
-	    "username" VARCHAR(100) NULL
+	    "uid" INTEGER PRIMARY KEY AUTOINCREMENT,
+	    "username" VARCHAR(100) NULL,
 	    "password" VARCHAR(100) NULL
 	)`
 	db.Exec(sqlTableUser)
