@@ -21,9 +21,9 @@ type _unit struct {
 	user    string
 }
 type _user struct {
+	username string `json:"username"`
+	password string `json:"password"`
 	uid      int64
-	username string
-	password string
 }
 type _comment struct {
 	id      int64
@@ -31,20 +31,22 @@ type _comment struct {
 	uid     int64
 }
 
-var postNumbers int64 //post数量
-var userNumbers int64 //用户数量
-var del []int         //记录删除post的id
+var postNumbers int64    //post数量
+var userNumbers int64    //用户数量
+var commentNumbers int64 //评论数量
+var del []int            //记录删除post的id
 func main() {
-	InitOpen() //初始化数据库
-	http.HandleFunc("/save", dataHandler)
-	http.HandleFunc("/show", showHandler)
-	http.HandleFunc("/comment", commentHandler)
-	http.HandleFunc("/change", changeHandler)
-	http.HandleFunc("/delete", deleteHandler)
-	http.HandleFunc("/register", regHandler)
-	http.HandleFunc("/login", loginHandler)
-	http.HandleFunc("/admin", adminHandler)
-	http.ListenAndServe("localhost:8080", nil) //阻塞监听
+	InitOpen()                                        //初始化数据库
+	http.HandleFunc("/save", dataHandler)             //储存推文
+	http.HandleFunc("/show", showHandler)             //随机显示一条推文
+	http.HandleFunc("/addComment", addCommentHandler) //添加评论
+	http.HandleFunc("/comment", commentHandler)       //显示评论
+	http.HandleFunc("/change", changeHandler)         //改变推文
+	http.HandleFunc("/delete", deleteHandler)         //删除推文
+	http.HandleFunc("/register", regHandler)          //用户注册
+	http.HandleFunc("/login", loginHandler)           //用户登录
+	http.HandleFunc("/admin", adminHandler)           //管理员登录
+	http.ListenAndServe("localhost:8080", nil)        //阻塞监听
 }
 
 func dataHandler(writer http.ResponseWriter, request *http.Request) {
@@ -108,6 +110,23 @@ func showHandler(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 	checkErr(err)
+}
+func addCommentHandler(writer http.ResponseWriter, request *http.Request) {
+	method := request.Method
+	var comment _comment
+	if method == "POST" {
+		data, _ := ioutil.ReadAll(request.Body)
+		json.Unmarshal(data, &comment)
+		db, err := sql.Open("sqlite3", "wall.db")
+		checkErr(err)
+		insert, err := db.Prepare("INSERT INTO comments(comment, uid) VALUES (?,?)")
+		checkErr(err)
+		res, err := insert.Exec(comment.comment, comment.uid)
+		commentNumbers, err = res.LastInsertId()
+		checkErr(err)
+		writer.WriteHeader(201) //已创建
+		db.Close()
+	}
 }
 func commentHandler(writer http.ResponseWriter, request *http.Request) {
 	method := request.Method
@@ -174,14 +193,20 @@ func regHandler(writer http.ResponseWriter, request *http.Request) {
 	request.ParseForm() //解析表单
 	method := request.Method
 	if method == "POST" {
+
 		//{
 		//	user.username = request.Form.Get("username")
 		//	user.password = request.Form.Get("password")
 		//}
+		//{
+		//	buf := new(bytes.Buffer)
+		//	buf.ReadFrom(request.Body)
+		//	data := buf.String()
+		//}
 		data, err := ioutil.ReadAll(request.Body)
-		checkErr(err)
+		fmt.Printf("data %s\n", data)
 		json.Unmarshal(data, &user) //解码json
-
+		fmt.Printf("user %v\n", user)
 		var userFromDB string
 		db, err := sql.Open("sqlite3", "wall.db")
 		checkErr(err)
