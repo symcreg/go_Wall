@@ -90,12 +90,12 @@ func changeHandler(writer http.ResponseWriter, request *http.Request) {
 }
 func deleteHandler(writer http.ResponseWriter, request *http.Request) {
 	request.ParseForm()
-	uid := request.Form.Get("uid")
+	id := request.Form.Get("id")
 	db, err := sql.Open("sqlite3", "wall.db")
 	checkErr(err)
 	delete, err := db.Prepare("delete from content where id=?")
 	checkErr(err)
-	res, err := delete.Exec(uid)
+	res, err := delete.Exec(id)
 	checkErr(err)
 	affect, err := res.RowsAffected()
 	checkErr(err)
@@ -105,7 +105,7 @@ func deleteHandler(writer http.ResponseWriter, request *http.Request) {
 	db.Close()
 }
 func regHandler(writer http.ResponseWriter, request *http.Request) {
-
+	var re int
 	var user _user
 	request.ParseForm() //解析表单
 	method := request.Method
@@ -113,19 +113,39 @@ func regHandler(writer http.ResponseWriter, request *http.Request) {
 		//goto reg
 
 	} else {
-		user.username = request.Form.Get("username")
-		user.password = request.Form.Get("password")
-		//存入数据库
+		//{
+		//	user.username = request.Form.Get("username")
+		//	user.password = request.Form.Get("password")
+		//}
+		data, err := ioutil.ReadAll(request.Body)
+		checkErr(err)
+		json.Unmarshal(data, &user) //解码json
+
+		var userFromDB string
 		db, err := sql.Open("sqlite3", "wall.db")
 		checkErr(err)
-		insert, err := db.Prepare("INSERT INTO users(username,password) values (?,?)")
-		checkErr(err)
-		res, err := insert.Exec(user.username, user.password)
-		checkErr(err)
-		userNumbers, err = res.LastInsertId()
-		checkErr(err)
-		//goto login
-		db.Close()
+		//检测是否名称重复
+		rows, _ := db.Query("SELECT username FROM users")
+		for rows.Next() {
+			rows.Scan(&userFromDB)
+			if user.username == userFromDB {
+				re = 1
+				writer.WriteHeader(205) //名称重复，请求重置表单
+				break
+			}
+		}
+		if re == 0 { //名称不重复
+			//存入数据库
+			insert, err := db.Prepare("INSERT INTO users(username,password) values (?,?)")
+			checkErr(err)
+			res, err := insert.Exec(user.username, user.password)
+			checkErr(err)
+			userNumbers, err = res.LastInsertId()
+			checkErr(err)
+			writer.WriteHeader(201) //已创建
+			//goto login
+			db.Close()
+		}
 	}
 
 }
@@ -133,14 +153,17 @@ func loginHandler(writer http.ResponseWriter, request *http.Request) {
 	var user _user
 	var userFromDB _user
 	method := request.Method
-	if method == "GET" {
-		{
-			//登录界面
-		}
-	} else {
+
+	if method == "POST" {
 		request.ParseForm()
-		user.username = request.Form.Get("username")
-		user.password = request.Form.Get("password")
+		//{
+		//	user.username = request.Form.Get("username")
+		//	user.password = request.Form.Get("password")
+		//}
+		data, err := ioutil.ReadAll(request.Body)
+		checkErr(err)
+		json.Unmarshal(data, &user) //解码json
+		//检测username&password
 		db, _ := sql.Open("sqlite2", "wall.db")
 		rows, _ := db.Query("SELECT * FROM users")
 		success := 0
@@ -150,9 +173,11 @@ func loginHandler(writer http.ResponseWriter, request *http.Request) {
 				//goto index
 				//http.Redirect(writer, request, "localhost:8080/index.com", http.StatusFound) //跳转到主页面
 				success = 1
-				username, err := json.Marshal(user.username)
+				writer.Header().Set("Content-Type", "application/json") //设置响应头数据类型为json类型
+				username, err := json.Marshal(user.username)            //转换为json格式
 				checkErr(err)
-				writer.Write([]byte(username))
+				writer.Write([]byte(username)) //返回用户名
+
 				break
 			}
 		}
