@@ -74,12 +74,12 @@ func changeHandler(writer http.ResponseWriter, request *http.Request) {
 	if method == "POST" {
 		request.ParseForm()
 		newContent := request.Form.Get("newContent")
-		uid := request.Form.Get("uid")
+		id := request.Form.Get("id")
 		db, err := sql.Open("sqlite3", "wall.db")
 		checkErr(err)
 		change, err := db.Prepare("update content set content=? where id=?")
 		checkErr(err)
-		res, err := change.Exec(newContent, uid)
+		res, err := change.Exec(newContent, id)
 		checkErr(err)
 		affect, err := res.RowsAffected()
 		checkErr(err)
@@ -109,10 +109,7 @@ func regHandler(writer http.ResponseWriter, request *http.Request) {
 	var user _user
 	request.ParseForm() //解析表单
 	method := request.Method
-	if method == "GET" {
-		//goto reg
-
-	} else {
+	if method == "POST" {
 		//{
 		//	user.username = request.Form.Get("username")
 		//	user.password = request.Form.Get("password")
@@ -182,7 +179,7 @@ func loginHandler(writer http.ResponseWriter, request *http.Request) {
 			}
 		}
 		if success == 0 {
-			//writer.WriteHeader()
+			writer.WriteHeader(511)
 		}
 	}
 	if user.username == "admin" && user.password == "admin" {
