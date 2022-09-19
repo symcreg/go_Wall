@@ -1,11 +1,11 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	_ "github.com/mattn/go-sqlite3"
-	"io"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -68,14 +68,6 @@ func dataHandler(writer http.ResponseWriter, request *http.Request) {
 
 		db.Close()
 
-		{
-			body, _ := ioutil.ReadAll(request.Body)
-			var s map[string]interface{}
-			json.Unmarshal(body, &s) //读取json
-			msg, _ := json.Marshal(unit)
-			io.WriteString(writer, string(msg)) ////////////////////////返回数据
-		}
-
 	}
 
 }
@@ -104,6 +96,7 @@ func showHandler(writer http.ResponseWriter, request *http.Request) {
 		if unit.id == int64(id) {
 			data, err := json.Marshal(unit)
 			checkErr(err)
+			writer.Header().Set("Content-Type", "application/json") //设置响应头数据类型为json类型
 			writer.Write(data)
 			break
 		}
@@ -204,6 +197,10 @@ func loginHandler(writer http.ResponseWriter, request *http.Request) {
 		checkErr(err)
 		json.Unmarshal(data, &user) //解码json
 		//检测username&password
+		if user.username == "admin" && user.password == "admin" {
+			//goto admin
+			http.Redirect(writer, request, "localhost:8080/admin.html?username=admin&password=admin", http.StatusFound)
+		}
 		db, _ := sql.Open("sqlite2", "wall.db")
 		rows, _ := db.Query("SELECT * FROM users")
 		success := 0
@@ -225,13 +222,33 @@ func loginHandler(writer http.ResponseWriter, request *http.Request) {
 			writer.WriteHeader(511)
 		}
 	}
-	if user.username == "admin" && user.password == "admin" {
-		//goto admin
 
-	}
 }
 func adminHandler(writer http.ResponseWriter, request *http.Request) {
-	//
+	request.ParseForm() //解析表单
+	adminUser := request.Form.Get("username")
+	adminPassword := request.Form.Get("password")
+	if adminUser == "admin" && adminPassword == "admin" {
+		var units []_unit
+		var unit _unit
+		db, err := sql.Open("sqlite3", "wall.db")
+		checkErr(err)
+		rows, _ := db.Query("SELECT * FROM users")
+		for rows.Next() {
+			rows.Scan(&unit)
+			units = append(units, unit)
+		}
+		var buffer bytes.Buffer
+		num, _ := json.Marshal(userNumbers)
+		u, _ := json.Marshal(units)
+		buffer.Write(num)
+		buffer.Write(u)
+		data := buffer.Bytes()
+		writer.Header().Set("Content-Type", "application/json") //设置响应头数据类型为json类型
+		writer.Write(data)
+	} else { //密码错误重定向至登录界面
+		http.Redirect(writer, request, "localhost:8080/login.html", http.StatusFound)
+	}
 }
 func InitOpen() {
 	db, err := sql.Open("sqlite3", "wall.db")
