@@ -14,21 +14,21 @@ import (
 )
 
 type _unit struct {
-	id      int64
-	content string
-	name    string
-	time    string
-	user    string
+	Id      int64  `json:"id"`
+	Content string `json:"content"`
+	Name    string `json:"name"`
+	Time    string `json:"time"`
+	User    string `json:"user"`
 }
 type _user struct {
-	username string `json:"username"`
-	password string `json:"password"`
-	uid      int64
+	Username string `json:"username"`
+	Password string `json:"password"`
+	Uid      int64  `json:"uid"`
 }
 type _comment struct {
-	id      int64
-	comment string
-	uid     int64
+	Id      int64  `json:"id"`
+	Comment string `json:"comment"`
+	Uid     int64  `json:"uid"`
 }
 
 var postNumbers int64    //post数量
@@ -69,7 +69,7 @@ func dataHandler(writer http.ResponseWriter, request *http.Request) {
 		checkErr(err)
 		insert, err := db.Prepare("INSERT INTO content(content,name,time,user) values (?,?,?,?)")
 		checkErr(err)
-		res, err := insert.Exec(unit.content, unit.name, unit.time, unit.user)
+		res, err := insert.Exec(unit.Content, unit.Name, unit.Time, unit.User)
 		checkErr(err)
 		postNumbers, err = res.LastInsertId()
 		checkErr(err)
@@ -101,7 +101,7 @@ func showHandler(writer http.ResponseWriter, request *http.Request) {
 	res, err := db.Query("SELECT * FROM users")
 	for res.Next() {
 		res.Scan(&unit)
-		if unit.id == int64(id) {
+		if unit.Id == int64(id) {
 			data, err := json.Marshal(unit)
 			checkErr(err)
 			writer.Header().Set("Content-Type", "application/json") //设置响应头数据类型为json类型
@@ -121,7 +121,7 @@ func addCommentHandler(writer http.ResponseWriter, request *http.Request) {
 		checkErr(err)
 		insert, err := db.Prepare("INSERT INTO comments(comment, uid) VALUES (?,?)")
 		checkErr(err)
-		res, err := insert.Exec(comment.comment, comment.uid)
+		res, err := insert.Exec(comment.Comment, comment.Uid)
 		commentNumbers, err = res.LastInsertId()
 		checkErr(err)
 		writer.WriteHeader(201) //已创建
@@ -141,7 +141,7 @@ func commentHandler(writer http.ResponseWriter, request *http.Request) {
 		res, err := db.Query("SELECT * FROM comments")
 		for res.Next() {
 			res.Scan(&comment)
-			if int(comment.id) == _id {
+			if int(comment.Id) == _id {
 				comments = append(comments, comment)
 			}
 		}
@@ -189,7 +189,8 @@ func deleteHandler(writer http.ResponseWriter, request *http.Request) {
 }
 func regHandler(writer http.ResponseWriter, request *http.Request) {
 	var re int
-	var user _user
+	//var user _user
+	user := _user{}
 	request.ParseForm() //解析表单
 	method := request.Method
 	if method == "POST" {
@@ -198,15 +199,10 @@ func regHandler(writer http.ResponseWriter, request *http.Request) {
 		//	user.username = request.Form.Get("username")
 		//	user.password = request.Form.Get("password")
 		//}
-		//{
-		//	buf := new(bytes.Buffer)
-		//	buf.ReadFrom(request.Body)
-		//	data := buf.String()
-		//}
 		data, err := ioutil.ReadAll(request.Body)
-		fmt.Printf("data %s\n", data)
-		json.Unmarshal(data, &user) //解码json
-		fmt.Printf("user %v\n", user)
+		json.Unmarshal(data, &user)
+		fmt.Println(user)
+
 		var userFromDB string
 		db, err := sql.Open("sqlite3", "wall.db")
 		checkErr(err)
@@ -214,7 +210,7 @@ func regHandler(writer http.ResponseWriter, request *http.Request) {
 		rows, _ := db.Query("SELECT username FROM users")
 		for rows.Next() {
 			rows.Scan(&userFromDB)
-			if user.username == userFromDB {
+			if user.Username == userFromDB {
 				re = 1
 				writer.WriteHeader(205) //名称重复，请求重置表单
 				break
@@ -224,7 +220,7 @@ func regHandler(writer http.ResponseWriter, request *http.Request) {
 			//存入数据库
 			insert, err := db.Prepare("INSERT INTO users(username,password) values (?,?)")
 			checkErr(err)
-			res, err := insert.Exec(user.username, user.password)
+			res, err := insert.Exec(user.Username, user.Password)
 			checkErr(err)
 			userNumbers, err = res.LastInsertId()
 			checkErr(err)
@@ -250,7 +246,7 @@ func loginHandler(writer http.ResponseWriter, request *http.Request) {
 		checkErr(err)
 		json.Unmarshal(data, &user) //解码json
 		//检测username&password
-		if user.username == "admin" && user.password == "admin" {
+		if user.Username == "admin" && user.Password == "admin" {
 			//goto admin
 			http.Redirect(writer, request, "localhost:8080/admin.html?username=admin&password=admin", http.StatusFound)
 		}
@@ -258,13 +254,13 @@ func loginHandler(writer http.ResponseWriter, request *http.Request) {
 		rows, _ := db.Query("SELECT * FROM users")
 		success := 0
 		for rows.Next() {
-			rows.Scan(&userFromDB.uid, &userFromDB.username, &userFromDB.password)
-			if user.username == userFromDB.username && user.password == userFromDB.password {
+			rows.Scan(&userFromDB.Uid, &userFromDB.Username, &userFromDB.Password)
+			if user.Username == userFromDB.Username && user.Password == userFromDB.Password {
 				//goto index
 				//http.Redirect(writer, request, "localhost:8080/index.com", http.StatusFound) //跳转到主页面
 				success = 1
 				writer.Header().Set("Content-Type", "application/json") //设置响应头数据类型为json类型
-				username, err := json.Marshal(user.username)            //转换为json格式
+				username, err := json.Marshal(user.Username)            //转换为json格式
 				checkErr(err)
 				writer.Write([]byte(username)) //返回用户名
 
