@@ -14,7 +14,7 @@ import (
 )
 
 type _unit struct {
-	Id      int64  `json:"id"`
+	Id      string `json:"id"`
 	Content string `json:"content"`
 	Name    string `json:"name"`
 	Time    string `json:"time"`
@@ -28,13 +28,13 @@ type _user struct {
 type _comment struct {
 	Id      int64  `json:"id"`
 	Comment string `json:"comment"`
-	Uid     int64  `json:"uid"`
+	Uid     string `json:"uid"`
 }
 
 var postNumbers int64    //post数量
 var userNumbers int64    //用户数量
 var commentNumbers int64 //评论数量
-var del []int            //记录删除post的id
+var del []int = []int{0} //记录删除post的id
 func main() {
 	InitOpen()                                        //初始化数据库
 	http.HandleFunc("/save", dataHandler)             //储存推文
@@ -73,7 +73,7 @@ func dataHandler(writer http.ResponseWriter, request *http.Request) {
 		checkErr(err)
 		postNumbers, err = res.LastInsertId()
 		checkErr(err)
-
+		writer.WriteHeader(201)
 		db.Close()
 
 	}
@@ -83,7 +83,8 @@ func showHandler(writer http.ResponseWriter, request *http.Request) {
 	var id int
 	var re bool
 	rand.Seed(time.Now().UnixNano())
-	id = rand.Intn(int(postNumbers))
+	id = rand.Intn(int(postNumbers + 1))
+
 	//避免随机到删除post的id
 	for i := 0; i < len(del); i++ {
 		if id == del[i] {
@@ -98,10 +99,11 @@ func showHandler(writer http.ResponseWriter, request *http.Request) {
 	var unit _unit
 	db, err := sql.Open("sqlite3", "wall.db")
 	checkErr(err)
-	res, err := db.Query("SELECT * FROM users")
+	res, err := db.Query("SELECT * FROM content")
 	for res.Next() {
-		res.Scan(&unit)
-		if unit.Id == int64(id) {
+		res.Scan(&unit.Id, &unit.Content, &unit.Name, &unit.Time, &unit.User)
+		_id, _ := strconv.Atoi(unit.Id)
+		if _id == id {
 			data, err := json.Marshal(unit)
 			checkErr(err)
 			writer.Header().Set("Content-Type", "application/json") //设置响应头数据类型为json类型
@@ -110,6 +112,7 @@ func showHandler(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 	checkErr(err)
+	db.Close()
 }
 func addCommentHandler(writer http.ResponseWriter, request *http.Request) {
 	method := request.Method
@@ -130,18 +133,25 @@ func addCommentHandler(writer http.ResponseWriter, request *http.Request) {
 }
 func commentHandler(writer http.ResponseWriter, request *http.Request) {
 	method := request.Method
-	if method == "POST" {
+	if method == "GET" {
 		var comments []_comment
 		var comment _comment
 		request.ParseForm()
 		id := request.Form.Get("id") //所查看评论的推文id
+		//var Uid string
+		//data, err := ioutil.ReadAll(request.Body)
+		//checkErr(err)
+		//json.Unmarshal(data, &Uid)
+		//fmt.Println(Uid)
 		_id, _ := strconv.Atoi(id)
 		db, err := sql.Open("sqlite3", "wall.db")
 		checkErr(err)
 		res, err := db.Query("SELECT * FROM comments")
 		for res.Next() {
-			res.Scan(&comment)
-			if int(comment.Id) == _id {
+			res.Scan(&comment.Id, &comment.Comment, &comment.Uid)
+
+			_uid, _ := strconv.Atoi(comment.Uid)
+			if _uid == _id {
 				comments = append(comments, comment)
 			}
 		}
@@ -153,14 +163,18 @@ func commentHandler(writer http.ResponseWriter, request *http.Request) {
 func changeHandler(writer http.ResponseWriter, request *http.Request) {
 	method := request.Method
 	if method == "POST" {
-		request.ParseForm()
-		newContent := request.Form.Get("newContent")
-		id := request.Form.Get("id")
+		//request.ParseForm()
+		//newContent := request.Form.Get("newContent")
+		//id := request.Form.Get("id")
+		var unit _unit
+		data, err := ioutil.ReadAll(request.Body)
+		checkErr(err)
+		json.Unmarshal(data, &unit)
 		db, err := sql.Open("sqlite3", "wall.db")
 		checkErr(err)
 		change, err := db.Prepare("update content set content=? where id=?")
 		checkErr(err)
-		res, err := change.Exec(newContent, id)
+		res, err := change.Exec(unit.Content, unit.Id)
 		checkErr(err)
 		affect, err := res.RowsAffected()
 		checkErr(err)
@@ -201,7 +215,6 @@ func regHandler(writer http.ResponseWriter, request *http.Request) {
 		//}
 		data, err := ioutil.ReadAll(request.Body)
 		json.Unmarshal(data, &user)
-		fmt.Println(user)
 
 		var userFromDB string
 		db, err := sql.Open("sqlite3", "wall.db")
@@ -237,7 +250,7 @@ func loginHandler(writer http.ResponseWriter, request *http.Request) {
 	method := request.Method
 
 	if method == "POST" {
-		request.ParseForm()
+		//request.ParseForm()
 		//{
 		//	user.username = request.Form.Get("username")
 		//	user.password = request.Form.Get("password")
@@ -246,30 +259,28 @@ func loginHandler(writer http.ResponseWriter, request *http.Request) {
 		checkErr(err)
 		json.Unmarshal(data, &user) //解码json
 		//检测username&password
-		if user.Username == "admin" && user.Password == "admin" {
-			//goto admin
-			http.Redirect(writer, request, "localhost:8080/admin.html?username=admin&password=admin", http.StatusFound)
-		}
-		db, _ := sql.Open("sqlite2", "wall.db")
+		//if user.Username == "admin" && user.Password == "admin" {
+		//	//goto admin
+		//	http.Redirect(writer, request, "localhost:8080/admin.html?username=admin&password=admin", http.StatusFound)
+		//}
+		db, _ := sql.Open("sqlite3", "wall.db")
 		rows, _ := db.Query("SELECT * FROM users")
 		success := 0
 		for rows.Next() {
 			rows.Scan(&userFromDB.Uid, &userFromDB.Username, &userFromDB.Password)
 			if user.Username == userFromDB.Username && user.Password == userFromDB.Password {
-				//goto index
 				//http.Redirect(writer, request, "localhost:8080/index.com", http.StatusFound) //跳转到主页面
 				success = 1
-				writer.Header().Set("Content-Type", "application/json") //设置响应头数据类型为json类型
-				username, err := json.Marshal(user.Username)            //转换为json格式
+				//username, err := json.Marshal(user.Username)            //转换为json格式
 				checkErr(err)
-				writer.Write([]byte(username)) //返回用户名
-
+				writer.Write([]byte(user.Username)) //返回用户名
 				break
 			}
 		}
 		if success == 0 {
 			writer.WriteHeader(511)
 		}
+		db.Close()
 	}
 
 }
