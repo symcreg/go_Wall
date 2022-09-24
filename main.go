@@ -83,7 +83,7 @@ func showHandler(writer http.ResponseWriter, request *http.Request) {
 	var id int
 	var re bool
 	rand.Seed(time.Now().UnixNano())
-	id = rand.Intn(int(postNumbers + 1))
+	id = rand.Intn(int(postNumbers+1)) + 1
 
 	//避免随机到删除post的id
 	for i := 0; i < len(del); i++ {
