@@ -31,6 +31,7 @@ type _comment struct {
 	Uid     string `json:"uid"`
 }
 
+var isLogin int
 var postNumbers int64    //post数量
 var userNumbers int64    //用户数量
 var commentNumbers int64 //评论数量
@@ -57,7 +58,7 @@ func dataHandler(writer http.ResponseWriter, request *http.Request) {
 		//{此处方法为读取表单数据
 		//	unit.content = request.Form.Get("content")
 		//	unit.name = request.Form.Get("name")
-		//	unit.time = time.Now().Format("2006/1/02/ 15:04")
+		unit.Time = time.Now().Format("2006/1/02/ 15:04")
 		//	unit.user = request.Form.Get("user")
 		//}
 		data, err := ioutil.ReadAll(request.Body)
@@ -186,18 +187,31 @@ func changeHandler(writer http.ResponseWriter, request *http.Request) {
 func deleteHandler(writer http.ResponseWriter, request *http.Request) {
 	request.ParseForm()
 	id := request.Form.Get("id")
+	user := request.Form.Get("user")
 	_id, _ := strconv.Atoi(id)
 	del = append(del, _id)
 	db, err := sql.Open("sqlite3", "wall.db")
+	rows, err := db.Query("SELECT user FROM content")
 	checkErr(err)
-	delete, err := db.Prepare("delete from content where id=?")
-	checkErr(err)
-	res, err := delete.Exec(id)
-	checkErr(err)
-	affect, err := res.RowsAffected()
-	checkErr(err)
-	fmt.Println(affect)
-	postNumbers--
+	var unit _unit
+	for rows.Next() {
+		rows.Scan(&unit)
+		if unit.Id == id {
+			if user == unit.User || user == "admin" {
+				delete, err := db.Prepare("delete from content where id=?")
+				checkErr(err)
+				res, err := delete.Exec(id)
+				checkErr(err)
+				affect, err := res.RowsAffected()
+				checkErr(err)
+				fmt.Println(affect)
+				postNumbers--
+			}
+		} else {
+			writer.WriteHeader(401)
+		}
+	}
+
 	//return
 	db.Close()
 }
@@ -273,6 +287,7 @@ func loginHandler(writer http.ResponseWriter, request *http.Request) {
 				success = 1
 				//username, err := json.Marshal(user.Username)            //转换为json格式
 				checkErr(err)
+				isLogin = 1
 				writer.Write([]byte(user.Username)) //返回用户名
 				break
 			}
