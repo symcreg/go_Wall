@@ -139,6 +139,7 @@ func GetAllHandler(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "application/json") //设置响应头数据类型为json类型
 		data, err := json.Marshal(units)
 		writer.Write(data)
+		db.Close()
 	}
 }
 func addCommentHandler(writer http.ResponseWriter, request *http.Request) {
