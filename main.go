@@ -40,6 +40,7 @@ func main() {
 	InitOpen()                                        //初始化数据库
 	http.HandleFunc("/save", dataHandler)             //储存推文
 	http.HandleFunc("/show", showHandler)             //随机显示一条推文
+	http.HandleFunc("/getPosts", GetAllHandler)       //获取全部推文
 	http.HandleFunc("/addComment", addCommentHandler) //添加评论
 	http.HandleFunc("/comment", commentHandler)       //显示评论
 	http.HandleFunc("/change", changeHandler)         //改变推文
@@ -48,6 +49,7 @@ func main() {
 	http.HandleFunc("/login", loginHandler)           //用户登录
 	http.HandleFunc("/admin", adminHandler)           //管理员登录
 	http.ListenAndServe("localhost:8080", nil)        //阻塞监听
+
 }
 
 func dataHandler(writer http.ResponseWriter, request *http.Request) {
@@ -82,16 +84,19 @@ func dataHandler(writer http.ResponseWriter, request *http.Request) {
 }
 func showHandler(writer http.ResponseWriter, request *http.Request) {
 	var id int
-	var re bool
+	var re bool = true
 	rand.Seed(time.Now().UnixNano())
 	id = rand.Intn(int(postNumbers+1)) + 1
 
 	//避免随机到删除post的id
-	for i := 0; i < len(del); i++ {
-		if id == del[i] {
-			re = true
-			break
+	for i := 0; re == true; i++ {
+		re = false
+		for j := 0; j < len(del); j++ {
+			if id == del[j] {
+				re = true
+			}
 		}
+
 		if re == true {
 			rand.Seed(time.Now().UnixNano())
 			id = rand.Intn(int(postNumbers))
@@ -114,6 +119,27 @@ func showHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 	checkErr(err)
 	db.Close()
+}
+func GetAllHandler(writer http.ResponseWriter, request *http.Request) {
+	request.ParseForm()
+	username := request.Form.Get("username")
+	method := request.Method
+	if method == "POST" {
+		var units []_unit
+		var unit _unit
+		db, err := sql.Open("sqlite3", "wall.db")
+		checkErr(err)
+		rows, err := db.Query("SELECT * FROM content")
+		for rows.Next() {
+			rows.Scan(&unit)
+			if unit.User == username {
+				units = append(units, unit)
+			}
+		}
+		writer.Header().Set("Content-Type", "application/json") //设置响应头数据类型为json类型
+		data, err := json.Marshal(units)
+		writer.Write(data)
+	}
 }
 func addCommentHandler(writer http.ResponseWriter, request *http.Request) {
 	method := request.Method
@@ -211,7 +237,6 @@ func deleteHandler(writer http.ResponseWriter, request *http.Request) {
 			writer.WriteHeader(401)
 		}
 	}
-
 	//return
 	db.Close()
 }
@@ -219,17 +244,31 @@ func regHandler(writer http.ResponseWriter, request *http.Request) {
 	var re int
 	//var user _user
 	user := _user{}
+
 	request.ParseForm() //解析表单
 	method := request.Method
-	if method == "POST" {
+	if method == "OPTIONS" {
+		writer.Header().Add("Access-Control-Allow-Origin", "*")
+		writer.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		writer.Header().Add("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		writer.WriteHeader(200)
 
+	}
+	if method == "POST" {
+		writer.Header().Add("Access-Control-Allow-Origin", "*")
+		writer.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		writer.Header().Add("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		//writer.Header().Add("Accept-Control-Allow-Origin", "*")
+		//writer.Header().Set("Accept-Control-Allow-Origin", "*")
 		//{
 		//	user.username = request.Form.Get("username")
 		//	user.password = request.Form.Get("password")
 		//}
 		data, err := ioutil.ReadAll(request.Body)
 		json.Unmarshal(data, &user)
-
+		{
+			fmt.Println(user)
+		}
 		var userFromDB string
 		db, err := sql.Open("sqlite3", "wall.db")
 		checkErr(err)
@@ -262,8 +301,17 @@ func loginHandler(writer http.ResponseWriter, request *http.Request) {
 	var user _user
 	var userFromDB _user
 	method := request.Method
+	if method == "OPTIONS" {
+		writer.Header().Add("Access-Control-Allow-Origin", "*")
+		writer.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		writer.Header().Add("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		writer.WriteHeader(200)
 
+	}
 	if method == "POST" {
+		writer.Header().Add("Access-Control-Allow-Origin", "*")
+		writer.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		writer.Header().Add("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 		//request.ParseForm()
 		//{
 		//	user.username = request.Form.Get("username")
@@ -288,6 +336,9 @@ func loginHandler(writer http.ResponseWriter, request *http.Request) {
 				//username, err := json.Marshal(user.Username)            //转换为json格式
 				checkErr(err)
 				isLogin = 1
+				{
+					fmt.Println("ssss")
+				}
 				writer.Write([]byte(user.Username)) //返回用户名
 				break
 			}
@@ -326,6 +377,7 @@ func adminHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 }
 func InitOpen() {
+
 	db, err := sql.Open("sqlite3", "wall.db")
 	if err != nil {
 		panic(err)
