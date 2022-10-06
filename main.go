@@ -54,7 +54,7 @@ func main() {
 
 func dataHandler(writer http.ResponseWriter, request *http.Request) {
 	var unit _unit
-	request.ParseForm() //解析表单
+	request.ParseForm()
 	method := request.Method
 	if method == "POST" {
 		//{此处方法为读取表单数据
