@@ -2,10 +2,10 @@ package main
 
 import (
 	"bytes"
-	"database/sql"
 	"encoding/json"
 	"fmt"
-	_ "github.com/mattn/go-sqlite3"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/sqlite"
 	"io/ioutil"
 	"math/rand"
 	"net/http"
@@ -57,30 +57,19 @@ func dataHandler(writer http.ResponseWriter, request *http.Request) {
 	request.ParseForm()
 	method := request.Method
 	if method == "POST" {
-		//{此处方法为读取表单数据
-		//	unit.content = request.Form.Get("content")
-		//	unit.name = request.Form.Get("name")
+		postNumbers++
 		unit.Time = time.Now().Format("2006/1/02/ 15:04")
-		//	unit.user = request.Form.Get("user")
-		//}
 		data, err := ioutil.ReadAll(request.Body)
 		checkErr(err)
 		json.Unmarshal(data, &unit) //解码json
-
+		unit.Id = strconv.Itoa(int(postNumbers))
 		//存入数据库
-		db, err := sql.Open("sqlite3", "wall.db")
+		db, err := gorm.Open("sqlite3", "wall.db")
 		checkErr(err)
-		insert, err := db.Prepare("INSERT INTO content(content,name,time,user) values (?,?,?,?)")
-		checkErr(err)
-		res, err := insert.Exec(unit.Content, unit.Name, unit.Time, unit.User)
-		checkErr(err)
-		postNumbers, err = res.LastInsertId()
-		checkErr(err)
+		defer db.Close()
+		db.Create(&unit)
 		writer.WriteHeader(201)
-		db.Close()
-
 	}
-
 }
 func showHandler(writer http.ResponseWriter, request *http.Request) {
 	var id int
@@ -103,39 +92,25 @@ func showHandler(writer http.ResponseWriter, request *http.Request) {
 		}
 	}
 	var unit _unit
-	db, err := sql.Open("sqlite3", "wall.db")
+	db, err := gorm.Open("sqlite3", "wall.db")
 	checkErr(err)
-	res, err := db.Query("SELECT * FROM content")
-	for res.Next() {
-		res.Scan(&unit.Id, &unit.Content, &unit.Name, &unit.Time, &unit.User)
-		_id, _ := strconv.Atoi(unit.Id)
-		if _id == id {
-			data, err := json.Marshal(unit)
-			checkErr(err)
-			writer.Header().Set("Content-Type", "application/json") //设置响应头数据类型为json类型
-			writer.Write(data)
-			break
-		}
-	}
+	defer db.Close()
+	db.Take(&unit)
+	data, err := json.Marshal(unit)
 	checkErr(err)
-	db.Close()
+	writer.Header().Set("Content-Type", "application/json") //设置响应头数据类型为json类型
+	writer.Write(data)
 }
 func GetAllHandler(writer http.ResponseWriter, request *http.Request) {
 	request.ParseForm()
-	username := request.Form.Get("username")
+	username := request.Form.Get("user")
 	method := request.Method
 	if method == "POST" {
 		var units []_unit
-		var unit _unit
-		db, err := sql.Open("sqlite3", "wall.db")
+		db, err := gorm.Open("sqlite3", "wall.db")
 		checkErr(err)
-		rows, err := db.Query("SELECT * FROM content")
-		for rows.Next() {
-			rows.Scan(&unit)
-			if unit.User == username {
-				units = append(units, unit)
-			}
-		}
+		defer db.Close()
+		db.Where("user=?", username).Find(&units)
 		writer.Header().Set("Content-Type", "application/json") //设置响应头数据类型为json类型
 		data, err := json.Marshal(units)
 		writer.Write(data)
@@ -145,43 +120,28 @@ func addCommentHandler(writer http.ResponseWriter, request *http.Request) {
 	method := request.Method
 	var comment _comment
 	if method == "POST" {
+		commentNumbers++
 		data, _ := ioutil.ReadAll(request.Body)
 		json.Unmarshal(data, &comment)
-		db, err := sql.Open("sqlite3", "wall.db")
+		comment.Id = commentNumbers
+		db, err := gorm.Open("sqlite3", "wall.db")
 		checkErr(err)
-		insert, err := db.Prepare("INSERT INTO comments(comment, uid) VALUES (?,?)")
-		checkErr(err)
-		res, err := insert.Exec(comment.Comment, comment.Uid)
-		commentNumbers, err = res.LastInsertId()
-		checkErr(err)
+		defer db.Close()
+		db.Create(&comment)
 		writer.WriteHeader(201) //已创建
-		db.Close()
 	}
 }
 func commentHandler(writer http.ResponseWriter, request *http.Request) {
 	method := request.Method
 	if method == "GET" {
 		var comments []_comment
-		var comment _comment
 		request.ParseForm()
 		id := request.Form.Get("id") //所查看评论的推文id
-		//var Uid string
-		//data, err := ioutil.ReadAll(request.Body)
-		//checkErr(err)
-		//json.Unmarshal(data, &Uid)
-		//fmt.Println(Uid)
 		_id, _ := strconv.Atoi(id)
-		db, err := sql.Open("sqlite3", "wall.db")
+		db, err := gorm.Open("sqlite3", "wall.db")
 		checkErr(err)
-		res, err := db.Query("SELECT * FROM comments")
-		for res.Next() {
-			res.Scan(&comment.Id, &comment.Comment, &comment.Uid)
-
-			_uid, _ := strconv.Atoi(comment.Uid)
-			if _uid == _id {
-				comments = append(comments, comment)
-			}
-		}
+		defer db.Close()
+		db.Where("uid=?", _id).Find(&comments)
 		writer.Header().Set("Content-Type", "application/json")
 		data, err := json.Marshal(comments)
 		writer.Write(data)
@@ -190,55 +150,26 @@ func commentHandler(writer http.ResponseWriter, request *http.Request) {
 func changeHandler(writer http.ResponseWriter, request *http.Request) {
 	method := request.Method
 	if method == "POST" {
-		//request.ParseForm()
-		//newContent := request.Form.Get("newContent")
-		//id := request.Form.Get("id")
 		var unit _unit
 		data, err := ioutil.ReadAll(request.Body)
 		checkErr(err)
 		json.Unmarshal(data, &unit)
-		db, err := sql.Open("sqlite3", "wall.db")
+		db, err := gorm.Open("sqlite3", "wall.db")
 		checkErr(err)
-		change, err := db.Prepare("update content set content=? where id=?")
-		checkErr(err)
-		res, err := change.Exec(unit.Content, unit.Id)
-		checkErr(err)
-		affect, err := res.RowsAffected()
-		checkErr(err)
-		fmt.Println(affect)
-		//return
-		db.Close()
+		defer db.Close()
+		db.Model(&unit).Where("id=?", unit.Id).Update("content", unit.Content)
 	}
 }
 func deleteHandler(writer http.ResponseWriter, request *http.Request) {
 	request.ParseForm()
 	id := request.Form.Get("id")
-	user := request.Form.Get("user")
 	_id, _ := strconv.Atoi(id)
 	del = append(del, _id)
-	db, err := sql.Open("sqlite3", "wall.db")
-	rows, err := db.Query("SELECT user FROM content")
+	db, err := gorm.Open("sqlite3", "wall.db")
 	checkErr(err)
-	var unit _unit
-	for rows.Next() {
-		rows.Scan(&unit)
-		if unit.Id == id {
-			if user == unit.User || user == "admin" {
-				delete, err := db.Prepare("delete from content where id=?")
-				checkErr(err)
-				res, err := delete.Exec(id)
-				checkErr(err)
-				affect, err := res.RowsAffected()
-				checkErr(err)
-				fmt.Println(affect)
-				postNumbers--
-			}
-		} else {
-			writer.WriteHeader(401)
-		}
-	}
-	//return
-	db.Close()
+	defer db.Close()
+	db.Where("id=?", id).Delete(_unit{})
+	writer.WriteHeader(410)
 }
 func regHandler(writer http.ResponseWriter, request *http.Request) {
 	var re int
@@ -258,44 +189,29 @@ func regHandler(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Add("Access-Control-Allow-Origin", "*")
 		writer.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 		writer.Header().Add("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-		//writer.Header().Add("Accept-Control-Allow-Origin", "*")
-		//writer.Header().Set("Accept-Control-Allow-Origin", "*")
-		//{
-		//	user.username = request.Form.Get("username")
-		//	user.password = request.Form.Get("password")
-		//}
 		data, err := ioutil.ReadAll(request.Body)
+		userNumbers++
 		json.Unmarshal(data, &user)
+		user.Uid = userNumbers
 		{
 			fmt.Println(user)
 		}
-		var userFromDB string
-		db, err := sql.Open("sqlite3", "wall.db")
+		var userFromDB _user
+		db, err := gorm.Open("sqlite3", "wall.db")
 		checkErr(err)
+		defer db.Close()
 		//检测是否名称重复
-		rows, _ := db.Query("SELECT username FROM users")
-		for rows.Next() {
-			rows.Scan(&userFromDB)
-			if user.Username == userFromDB {
-				re = 1
-				writer.WriteHeader(205) //名称重复，请求重置表单
-				break
-			}
+		db.Where("username=?", user.Username).First(&userFromDB)
+		if userFromDB.Username != "" {
+			re = 1
+			writer.WriteHeader(205)
 		}
 		if re == 0 { //名称不重复
 			//存入数据库
-			insert, err := db.Prepare("INSERT INTO users(username,password) values (?,?)")
-			checkErr(err)
-			res, err := insert.Exec(user.Username, user.Password)
-			checkErr(err)
-			userNumbers, err = res.LastInsertId()
-			checkErr(err)
+			db.Create(&user)
 			writer.WriteHeader(201) //已创建
-			//goto login
-			db.Close()
 		}
 	}
-
 }
 func loginHandler(writer http.ResponseWriter, request *http.Request) {
 	var user _user
@@ -312,43 +228,24 @@ func loginHandler(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Add("Access-Control-Allow-Origin", "*")
 		writer.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
 		writer.Header().Add("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
-		//request.ParseForm()
-		//{
-		//	user.username = request.Form.Get("username")
-		//	user.password = request.Form.Get("password")
-		//}
 		data, err := ioutil.ReadAll(request.Body)
 		checkErr(err)
 		json.Unmarshal(data, &user) //解码json
-		//检测username&password
-		//if user.Username == "admin" && user.Password == "admin" {
-		//	//goto admin
-		//	http.Redirect(writer, request, "localhost:8080/admin.html?username=admin&password=admin", http.StatusFound)
-		//}
-		db, _ := sql.Open("sqlite3", "wall.db")
-		rows, _ := db.Query("SELECT * FROM users")
+		user.Uid = userNumbers
+		db, err := gorm.Open("sqlite3", "wall.db")
+		checkErr(err)
+		defer db.Close()
 		success := 0
-		for rows.Next() {
-			rows.Scan(&userFromDB.Uid, &userFromDB.Username, &userFromDB.Password)
-			if user.Username == userFromDB.Username && user.Password == userFromDB.Password {
-				//http.Redirect(writer, request, "localhost:8080/index.com", http.StatusFound) //跳转到主页面
-				success = 1
-				//username, err := json.Marshal(user.Username)            //转换为json格式
-				checkErr(err)
-				isLogin = 1
-				{
-					fmt.Println("ssss")
-				}
-				writer.Write([]byte(user.Username)) //返回用户名
-				break
-			}
+		db.Where("username=?", user.Username).First(&userFromDB)
+		if user.Username == userFromDB.Username && user.Password == userFromDB.Password {
+			success = 1
+			isLogin = 1
+			writer.Write([]byte(user.Username)) //返回用户名
 		}
 		if success == 0 {
 			writer.WriteHeader(511)
 		}
-		db.Close()
 	}
-
 }
 func adminHandler(writer http.ResponseWriter, request *http.Request) {
 	request.ParseForm() //解析表单
@@ -356,14 +253,10 @@ func adminHandler(writer http.ResponseWriter, request *http.Request) {
 	adminPassword := request.Form.Get("password")
 	if adminUser == "admin" && adminPassword == "admin" {
 		var units []_unit
-		var unit _unit
-		db, err := sql.Open("sqlite3", "wall.db")
+		db, err := gorm.Open("sqlite3", "wall.db")
 		checkErr(err)
-		rows, _ := db.Query("SELECT * FROM users")
-		for rows.Next() {
-			rows.Scan(&unit)
-			units = append(units, unit)
-		}
+		defer db.Close()
+		db.Find(&units)
 		var buffer bytes.Buffer
 		num, _ := json.Marshal(userNumbers)
 		u, _ := json.Marshal(units)
@@ -372,39 +265,20 @@ func adminHandler(writer http.ResponseWriter, request *http.Request) {
 		data := buffer.Bytes()
 		writer.Header().Set("Content-Type", "application/json") //设置响应头数据类型为json类型
 		writer.Write(data)
-	} else { //密码错误重定向至登录界面
+	} else { //密码错误
 		http.Redirect(writer, request, "localhost:8080/login.html", http.StatusFound)
 	}
 }
 func InitOpen() {
 
-	db, err := sql.Open("sqlite3", "wall.db")
+	db, err := gorm.Open("sqlite3", "wall.db")
 	if err != nil {
 		panic(err)
 	}
-	sqlTableContent := `CREATE TABLE IF NOT EXISTS "content"(
-	    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-	    "content" VARCHAR(1024) NULL,
-	    "name" VARCHAR(20) NULL,
-	    "time" VARCHAR(50) NULL,
-	    "user" VARCHAR(100) NULL
-	)`
-	db.Exec(sqlTableContent)
-	sqlTableUser := `
-	CREATE TABLE IF NOT EXISTS "users"(
-	    "uid" INTEGER PRIMARY KEY AUTOINCREMENT,
-	    "username" VARCHAR(100) NULL,
-	    "password" VARCHAR(100) NULL
-	)`
-	db.Exec(sqlTableUser)
-	sqlTableComment := `
-	CREATE TABLE IF NOT EXISTS "comments"(
-	    "id" INTEGER PRIMARY KEY AUTOINCREMENT,
-	    "comment" VARCHAR(100) NULL,
-	    "uid" INTEGER NULL
-	)`
-	db.Exec(sqlTableComment)
-	db.Close()
+	defer db.Close()
+	db.AutoMigrate(&_comment{})
+	db.AutoMigrate(&_unit{})
+	db.AutoMigrate(&_user{})
 }
 func checkErr(err error) {
 	if err != nil {
