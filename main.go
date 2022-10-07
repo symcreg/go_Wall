@@ -48,7 +48,7 @@ func main() {
 	http.HandleFunc("/register", regHandler)          //用户注册
 	http.HandleFunc("/login", loginHandler)           //用户登录
 	http.HandleFunc("/admin", adminHandler)           //管理员登录
-	http.ListenAndServe("localhost:8080", nil)        //阻塞监听
+	http.ListenAndServe("localhost:80", nil)          //阻塞监听
 
 }
 
@@ -56,7 +56,16 @@ func dataHandler(writer http.ResponseWriter, request *http.Request) {
 	var unit _unit
 	request.ParseForm()
 	method := request.Method
+	if method == "OPTIONS" {
+		writer.Header().Add("Access-Control-Allow-Origin", "*")
+		writer.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		writer.Header().Add("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+		writer.WriteHeader(200)
+	}
 	if method == "POST" {
+		writer.Header().Add("Access-Control-Allow-Origin", "*")
+		writer.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+		writer.Header().Add("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 		postNumbers++
 		unit.Time = time.Now().Format("2006/1/02/ 15:04")
 		data, err := ioutil.ReadAll(request.Body)
@@ -72,6 +81,9 @@ func dataHandler(writer http.ResponseWriter, request *http.Request) {
 	}
 }
 func showHandler(writer http.ResponseWriter, request *http.Request) {
+	writer.Header().Add("Access-Control-Allow-Origin", "*")
+	writer.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PUT, DELETE")
+	writer.Header().Add("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
 	var id int
 	var re bool = true
 	rand.Seed(time.Now().UnixNano())
@@ -95,7 +107,7 @@ func showHandler(writer http.ResponseWriter, request *http.Request) {
 	db, err := gorm.Open("sqlite3", "wall.db")
 	checkErr(err)
 	defer db.Close()
-	db.Take(&unit)
+	db.Where("id=?", id).First(&unit)
 	data, err := json.Marshal(unit)
 	checkErr(err)
 	writer.Header().Set("Content-Type", "application/json") //设置响应头数据类型为json类型
@@ -104,17 +116,21 @@ func showHandler(writer http.ResponseWriter, request *http.Request) {
 func GetAllHandler(writer http.ResponseWriter, request *http.Request) {
 	request.ParseForm()
 	username := request.Form.Get("user")
-	method := request.Method
-	if method == "POST" {
-		var units []_unit
-		db, err := gorm.Open("sqlite3", "wall.db")
-		checkErr(err)
-		defer db.Close()
-		db.Where("user=?", username).Find(&units)
-		writer.Header().Set("Content-Type", "application/json") //设置响应头数据类型为json类型
-		data, err := json.Marshal(units)
-		writer.Write(data)
+	writer.Header().Add("Access-Control-Allow-Origin", "*")
+	writer.Header().Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, PU T, DELETE")
+	writer.Header().Add("Access-Control-Allow-Headers", "Accept, Content-Type, Content-Length, Accept-Encoding, X-CSRF-Token, Authorization")
+	{
+		fmt.Println(username)
 	}
+	var units []_unit
+	db, err := gorm.Open("sqlite3", "wall.db")
+	checkErr(err)
+	defer db.Close()
+	db.Where("user=?", username).Find(&units)
+	writer.Header().Set("Content-Type", "application/json") //设置响应头数据类型为json类型
+	data, err := json.Marshal(units)
+	writer.Write([]byte(strconv.Itoa(int(postNumbers))))
+	writer.Write(data)
 }
 func addCommentHandler(writer http.ResponseWriter, request *http.Request) {
 	method := request.Method
@@ -240,6 +256,9 @@ func loginHandler(writer http.ResponseWriter, request *http.Request) {
 		if user.Username == userFromDB.Username && user.Password == userFromDB.Password {
 			success = 1
 			isLogin = 1
+			{
+				fmt.Println(user.Username)
+			}
 			writer.Write([]byte(user.Username)) //返回用户名
 		}
 		if success == 0 {
