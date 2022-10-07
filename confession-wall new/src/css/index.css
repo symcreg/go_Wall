@@ -1,0 +1,50 @@
+.buttonbox{
+    text-align: center;
+    margin-top: 100px;
+}
+.btn{
+    height: 60px;
+    width:100px;
+    font-size: large;
+    margin-left: 10px;
+    margin-right: 10px;
+    border-radius: 8px;
+    border-width: 0;
+    
+}
+.btn:hover{
+    background-color:rgb(211, 246, 246);
+}
+.content{
+    width: 1200px;
+    height:1000px;     
+    margin: 0 auto;
+    padding-top: 100px;
+    border-radius: 10px;
+    background-image: url(../img/index-background.webp);
+    background-repeat: no-repeat;
+    background-size: 70%;
+    background-position: 50%;
+}
+.title{
+    text-align: center;
+    font-size: large;
+
+}
+#Express{
+    width: 40%;
+    height: 150px;
+    padding: 6px 20px;
+    box-sizing: border-box;
+    border: 2px solid #ff67e7;
+    border-radius: 4px;
+    background-color: #d966ff;
+    resize: none;
+}
+.btn_submit{
+    margin-top: 20px;
+    height: 40px;
+    width: 60px;
+    border-radius: 10px;
+    border-width: 1px;
+}

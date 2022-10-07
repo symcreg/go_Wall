@@ -48,7 +48,7 @@ func main() {
 	http.HandleFunc("/register", regHandler)          //用户注册
 	http.HandleFunc("/login", loginHandler)           //用户登录
 	http.HandleFunc("/admin", adminHandler)           //管理员登录
-	http.ListenAndServe("localhost:80", nil)          //阻塞监听
+	http.ListenAndServe("localhost:8080", nil)        //阻塞监听
 
 }
 

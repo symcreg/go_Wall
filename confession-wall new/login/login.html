@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>表白墙 - 登录</title>
+    <link rel="stylesheet" href="../src/css/login.css">
+    <script src="https://cdn.bootcdn.net/ajax/libs/vue/2.6.14/vue.min.js"></script>
+    <script src="../src/js/submit.js"></script>
+</head>
+<body class="body">
+    <div class="container" id="app" >
+        <div class="title">登录</div>
+        <div style="width:800px;position: relative;left: 50%;margin-left: -215px;top: 50%;">
+            <div class="inputbox" >
+                用户名:<input class="text" v-model="info.username" type="text" name="" id="">
+            </div>
+            <div class="inputbox">
+                密&nbsp;&nbsp;&nbsp;码:<input class="text" v-model="info.password" type="password" name="" id="">
+            </div>
+            <a href="../register/register.html" style="text-decoration: none;"><div style="margin-left:120px;margin-top:20px;font-size: larger;font-weight:700">还没有账号，请先注册</div></a>
+        </div>
+        <div class="buttonbox" >
+            <button class="button" @click="login">登录</button>
+            <button class="button" onclick="returnBack()">返回</button>
+        </div>
+    </div>
+</body>
+
+<script src="../src/js/link.js"></script>
+<script src="../src/js/submit.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+<script>
+    function config(){
+        let wind = $(window)
+        let container = document.getElementById('app')
+        container.style.width = wind.width()+"px"
+        container.style.height = wind.height()+"px"
+    }
+    setInterval("config()",1)
+    new Vue({
+    el:"#app",
+    data:{
+        info:{
+            username: "",
+            password: ""
+        }
+    },
+    methods:{
+        login(){
+            var data={};
+            const url="http://localhost:8080/login";
+            // const url="http://1.15.238.17:8080/login";
+            
+            data.username=this.info.username;
+            data.password=this.info.password;
+            console.log(data);
+            $.ajax({
+                url:url,
+                data:JSON.stringify(data),
+                type:"POST",
+                contentType:'application/json',
+                success:(data,status,xhr)=>{
+                    // if (data.code==200){
+                    //     console.log(res);
+                    //     alert("登录成功");
+                    //     window.location.href="../wall/wall.html?username="+data.username;
+                    // }
+                    // else if(data.code==511){
+                    //     alert("用户名或密码错误");
+                    // }
+                        if(xhr.status=="200"){
+                        alert("登录成功");
+                        window.location.href="../wall/wall.html?username="+data;//只需要data，不用data.user
+                        }
+                        else if(xhr.status=="511"){
+                            alert("用户名或密码错误!");
+                        }
+                },
+                error:()=>{
+                    alert("用户名或密码错误!");
+                }
+            })
+        }
+    }
+})
+</script>
+</html>

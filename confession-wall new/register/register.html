@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>表白墙 - 注册</title>
+    <link rel="stylesheet" href="../src/css/login.css">
+    <script src="https://cdn.bootcdn.net/ajax/libs/vue/2.6.14/vue.min.js"></script>
+    <script src="../src/js/submit.js"></script>
+</head>
+<body class="body" id="body">
+    <div class="container" id="app">
+        <div class="title">注册</div>
+        <div style="width:800px;position: relative;left: 50%;margin-left: -215px;top: 50%;">
+            <div class="inputbox">
+                用&nbsp;户&nbsp;名:&nbsp;<input type="text" class="text" v-model="info.username" name="" id="">
+            </div>
+            <div class="inputbox">
+                密&nbsp;&nbsp;&nbsp;&nbsp;码:&nbsp;&nbsp;<input type="password" class="text" v-model="info.password" name="" id="">
+            </div>
+            <div class="inputbox">
+                重复密码:<input type="password" class="text" v-model="info.repeatpwd" name="" id="">
+            </div>
+            <a href="../login/login.html" style="color: #8419fe;font-weight:700;font-size: larger;text-decoration: none;margin-top:20px"><div style="margin-left:130px">已有账号，去登录</div></a>
+        </div>
+        <div class="buttonbox" id="bottonbox">
+            <button class="button" @click="register">注册</button>
+            <button class="button" onclick="returnBack()">返回</button>
+        </div>
+    </div>
+</body>
+<script src="../src/js/link.js"></script>
+<script src="../src/js/submit.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+<script>
+    function config(){
+        let wind = $(window)
+        let container = document.getElementById('app')
+        container.style.width = wind.width()+"px"
+        container.style.height = wind.height()+"px"
+    }
+    setInterval("config()",1)
+    new Vue({
+    el:"#app",
+    data: {
+        info:{
+            username: "",        //存储用户名、密码、重复密码
+            password: "",
+            repeatpwd:""
+        }
+    },
+    methods:{
+        register(){
+            let limited = /(?=.*[A-Z])(?=.*[a-z])/g;
+            if (this.info.password != this.info.repeatpwd){
+                alert("您的两次密码不一致，请重新输入！");
+            }
+            else if (limited.test(this.info.password) != true){
+                alert("您的密码必须含有以下字符各一个：大写字母、小写字母");//通过正则表达式限制密码
+            }
+            else if (this.info.password.length < 8)
+            {
+                alert("密码长度过短，您的密码至少需要8个字符");//限制密码长度
+            }
+            else{
+            const url="http://localhost:8080/register";
+            var data = {};
+            data.username=this.info.username;
+            data.password=this.info.password;
+            console.log(data);
+            $.ajax({
+                url:url,
+                data:JSON.stringify(data),
+                type:"POST",
+                contentType:'application/json',
+                success:function(data,status,xhr){
+                    if (xhr.status=="201"){
+                        alert("注册成功");
+                        window.location.href="../../login/login.html"
+                    }
+                    else if(xhr.status=="205"){
+                        alert("该用户名已注册");  
+                    }
+                },       
+                error:function(){
+                    
+                }          
+            })
+            }   
+        }
+    }
+})
+</script>
+</html>

@@ -1,0 +1,130 @@
+.topbar{
+    height:70px;
+    background-color: rgb(231, 255, 255);
+    padding-top: 10px;
+}
+.main{
+    text-align: center;
+    margin: 0 auto;
+}
+#express{
+    height: 200px;
+    width:500px;
+    margin-top: 30px;
+    font-size: x-large;
+    background-color: rgb(253, 255, 240);
+    border-radius: 10px;
+}
+.btn-submit{
+    width: 100px;
+    height: 50px;
+    position: relative;
+    top: 20px;
+    border-radius:10px;
+    border-width: 3px;
+    font-size: large;
+    background: linear-gradient(to right, #ff26d3, white);
+    background-size: 200% 100%;
+    color:white;
+    border-color: #e191ff;
+}
+.btn-submit:hover{
+    animation: mouseonbutton linear 120ms forwards;
+}
+.btn-manage{
+    width:70px;
+    height:70px;
+    border-radius: 100px;
+    border-width: 1px;
+    border-color: rgb(74, 192, 38); 
+    background-color: rgb(219, 255, 243);
+}
+.btn-quit{
+    width:60px;
+    height:60px;
+    margin-left: 1600px;
+    border-radius: 100px;
+    border: none;
+}
+.btn-wall{
+    width:70px;
+    height:70px;
+    margin-left: 0;
+    border-radius: 100px;
+    border-width: 1px;
+    border-color: rgb(251, 1, 230); 
+    background-color: rgb(255, 216, 238);
+}
+.btn-user{
+    width:70px;
+    height:70px;
+    margin-left: 1455px;
+    border-radius: 100px;
+    border-width: 1px;
+    border-color: aqua; 
+    background-color: rgb(219, 255, 243);
+}
+.content{
+    height: 809px;
+    background: linear-gradient(to bottom right, #a1ffec,pink) no-repeat;
+    background-size: 100%;
+}
+.user{
+    height: 30px;
+    width: 120px;
+    border-radius: 10px;
+    font-size: large;
+}
+.body {
+    width: 1707px;
+    height: 809px;
+    margin:0;
+    padding: 0;
+}
+.confessionbox{       /* 管理表白界面的显示*/    
+    height:200px;
+    width: 400px;
+    background-color: antiquewhite;
+    border-radius: 10px;
+    margin: 40px 40px;
+}  
+
+
+
+.btn-confession{  /* 发布表白提交按钮 */
+    margin-top: 10px;
+    height:40px;
+    width:80px;
+    margin-left: 10px;
+    margin-right:10px;
+    border-radius: 10px;
+    border:none;
+}
+.name{
+    margin-top: 170px;
+    font-size: large;
+}
+.confession{
+    margin-top:10px;
+    font-size: larger;
+}
+.editbox{/* 编辑框 */
+    position:fixed;
+    height:400px;
+    width:400px;
+    border-radius: 20px;
+    background-color: rgb(213, 255, 241);
+    left:40%;
+    bottom:30%;     
+}
+.btn-change-submit{/* 修改表白提交按钮 */
+    width:60px;
+    height:30px;
+    border-radius: 10px;
+    border:0;
+    margin-top: 20px;
+}
+@keyframes mouseonbutton{
+    from {background-position: 0 0;color: #ffffff}
+    to {background-position: 100% 0;color: #ff00a8}
+}

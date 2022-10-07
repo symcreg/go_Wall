@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<link rel="stylesheet" href="../../src/css/add-manage.css">
+<script src="https://cdn.bootcdn.net/ajax/libs/vue/2.6.14/vue.min.js"></script>
+<body>
+    <div class="content" id="app">
+        <div class="topbar">
+            <button class="btn-user" @click="quit">{{user}}</button>
+            <button class="btn-wall" @click="gotoWall">表白墙</button>
+            <button class="btn-manage" @click="gotoAdd">添加</button>
+        </div>          
+        <div class="main" >
+            <div class="confessionbox" v-for="(item,index) in confessionList"  style="display:inline-table ;">
+                <div class="confession">{{item.confession}}</div>
+                <div class="name">by {{item.name}}</div>
+                <button class="btn-confession" @click="remove(index)">删除</button>
+                <button class="btn-confession" @click="change(index)">修改</button>
+                <!-- 删除修改按钮 -->
+            </div>
+            <div class="editbox"  v-if="flag">
+                <!-- 增加修改帖子的框 -->
+                <div><textarea v-model="newContent" style="height:200px;width:300px;border-radius:10px;margin-top: 40px;" name="" id="" cols="30" rows="10"></textarea></div>
+                <div><button class="btn-change-submit" @click="submitChange">提交</button></div>
+            </div>
+        </div>
+    </div>
+</body>
+<script src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
+<script src="../../src/js/link.js"></script>
+<script>
+    var vm=new Vue({
+        el:"#app",
+        data: {
+            user:"",
+            id:"",
+            flag:false,
+            newContent:"",
+            confessionList:[{
+                confession:"helloworld",
+                name:"xxx",
+                user:"123"
+            },
+            {
+                confession:"I love you",
+                name:"yyy",
+                user:"1234"
+            },
+            {
+                confession:"helloworld",
+                name:"zzz",
+                user:"12345"
+            }
+        ]
+        },
+        created:function(){
+                this.flag=false;
+                var user=window.location.href.split("=")[1];
+                this.user=user;
+                if (user=="undefined"){
+                    alert("请先登录!");
+                    window.location.href="../../login/login.html";
+                }
+                
+                // data.content=this.confession;
+                // data.name=this.name;
+                // data.user=window.location.href.split("=")[1];
+                const url="http://localhost:8080/getPosts?user="+user;
+                $.ajax({
+                    url:url,
+                    type:"GET",
+                    data:"",
+                    success:function(data){
+                        console.log(data);
+                        this.confessionList=data;
+                    }
+                })
+        },
+        methods:{
+            remove(e){
+                let data={};
+                let id=String(e);
+                let url="http://localhost:8080/delete?id="+id;
+                $.ajax({
+                    type:"DELETE",
+                    url:url,
+                    contentType:"application/json",
+                    success:(data)=>{
+                        console.log(data);
+                        alert("删除成功");
+                    }
+                })
+            },
+            change(e){
+                this.flag=true;
+                this.id=String(e);       
+            },
+            gotoAdd(){
+                window.location.href="../add/add.html?username="+this.user;
+            },
+            submitChange(){                   //发送修改后的表白
+                let data={};
+                data.id=this.id;
+                data.content=this.newContent;
+                let url="http://localhost:8080/change";
+                this.flag=false;
+                $.ajax({
+                    type:"POST",
+                    url:url,
+                    data:JSON.stringify(data),
+                    contentType:"application/json",
+                    success:(data)=>{
+                        console.log(data);
+                    }
+                })
+            },
+            quit(){
+                var isQuit=window.confirm("是否退出登录");
+                if (isQuit)
+                    window.location.href="../../index.html";
+            },
+            gotoWall(){
+                window.location.href="../../wall/wall.html";
+            }
+        }
+        })
+</script>
+</html>
